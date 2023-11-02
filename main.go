@@ -39,6 +39,9 @@ func main() {
 		fmt.Println("Неверное значение, метод установлен по умолчанию на 1")
 		method = 1
 	}
+	if method > 2 || method < 1 {
+		method = 1
+	}
 
 	go sender()
 
