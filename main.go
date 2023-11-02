@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
-	"sync"
 	"time"
 )
 
@@ -17,9 +15,7 @@ func main() {
 	rand.Seed(time.Now().Unix())
 	c1 := make(chan int)
 	c2 := make(chan int)
-	countOfc1 := 0
-	countOfc2 := 0
-	var wg sync.WaitGroup
+	var method int
 	//Отправитель сообщений
 	sender := func() {
 		for {
@@ -28,41 +24,47 @@ func main() {
 			chance := RandInt(1, 100)
 			//Если число в chance меньше либо равно 50, отправляем сообщение в канал c1,
 			//если больше 50, то в канал c2
+			<-time.Tick(time.Second * time.Duration(RandInt(1, 5)))
 			if chance <= 50 {
 				c1 <- RandInt(1, 100)
 			} else {
-				chance = RandInt(1, 100)
-				if chance <= 50 {
-					c2 <- RandInt(1, 100)
-				} else {
-					continue
-				}
+				c2 <- RandInt(1, 100)
 			}
 		}
 	}
 
-	//Принимающий сообщения
-	receiving := func() {
-		for {
-			select {
-			case num := <-c1:
-				{
-					countOfc1++
-					fmt.Println("Канал с1 принял "+strconv.Itoa(countOfc1)+" сообщений, сообщение из канала: ", num)
-				}
-			case num := <-c2:
-				{
-					countOfc2++
-					fmt.Println("Канал с2 принял "+strconv.Itoa(countOfc1)+" сообщений, сообщение из канала: ", num)
-				}
-			default:
-				fmt.Println("Сообщений не поступило")
-			}
-		}
+	fmt.Println("Метод прослушивание каналов (1 - time.After, 2 - default): ")
+	_, err := fmt.Scanln(&method)
+	if err != nil {
+		fmt.Println("Неверное значение, метод установлен по умолчанию на 1")
+		method = 1
 	}
 
 	go sender()
-	go receiving()
-	wg.Add(2)
-	wg.Wait()
+
+	if method == 1 {
+		//Пример с time.After() (ожидание ответа от каждого канала 2 сек)
+		for {
+			select {
+			case num := <-c1:
+				fmt.Println("Канал с1 принял сообщение: ", num)
+			case num := <-c2:
+				fmt.Println("Канал с2 принял сообщение: ", num)
+			case <-time.After(2 * time.Second):
+				fmt.Println("Время: ", time.Now().Format("15:04"))
+			}
+		}
+	} else {
+		//Пример с default
+		for {
+			select {
+			case num := <-c1:
+				fmt.Println("Канал с1 принял сообщение: ", num)
+			case num := <-c2:
+				fmt.Println("Канал с2 принял сообщение: ", num)
+			default:
+				fmt.Println("Время: ", time.Now().Format("15:04"))
+			}
+		}
+	}
 }
